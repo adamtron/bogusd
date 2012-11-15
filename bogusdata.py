@@ -1,5 +1,6 @@
 import argparse
 import random
+import threading
 from types import *
 
 
@@ -12,12 +13,12 @@ class DataPoint():
     def __init__(self,
                  name,
                  data_type=FloatType,
-                 rnd_gen=random.random,
-                 rnd_gen_kargs=None):
+                 gen_fx=random.random,
+                 gen_fx_kargs=None):
         self.name = name
         self.data_type = data_type
-        self.gen_fx = rnd_gen
-        self.gen_fx_kargs = rnd_gen_kargs
+        self.gen_fx = gen_fx
+        self.gen_fx_kargs = gen_fx_kargs
 
     def data_gen(self):
         if self.gen_fx_kargs is None:
@@ -34,9 +35,9 @@ class DataPoint():
 
 class BogusDataGenerator():
     points = list()
-
-    def __init__(self):
-        pass
+    
+    def __init__(self, delimiter=','):
+        self.delimiter = delimiter
 
     def append(self, datapoint):
         self.points.append(datapoint)
@@ -49,7 +50,34 @@ class BogusDataGenerator():
 
         return datas
 
+class ScheduledBogusDataGenerator(BogusDataGenerator):
+    _callback = None
+    _timer = None
+    _ms_interval = 1000;
+    
+    def __init__(self):
+        pass
+        
+    def start_fixed_interval(self, ms_interval, callback):
+        self._callback = callback
+        self._ms_interval = ms_interval
+        
+        self._timer = threading.Timer(self._ms_interval / 1000, self.__do_callback__)
+        self._timer.start()
+    
+    def __do_callback__(self):
+        datas = self.data_gen()
+        self._timer = threading.Timer(self._ms_interval / 1000, self.__do_callback__)
+        self._timer.start()
+        
+        self._callback(results=datas)
+        
+    def cancel(self):
+        self._timer.cancel()
 
+def local_callback(results):
+    print(results)
+    
 def main():
     arg_parser = argparse.ArgumentParser(description='Bogus Data Generator')
     arg_parser.add_argument('input_file')
@@ -58,7 +86,7 @@ def main():
     args = arg_parser.parse_args()
     print args.input_file, args.output_file
 
-    generator = BogusDataGenerator()
+    generator = ScheduledBogusDataGenerator()
 
     #Ex: Baisc gaussian distribution fx
     data_point = DataPoint('Input2',
@@ -80,7 +108,7 @@ def main():
 
     data_point = DataPoint('Input3',
                            data_type=FloatType,
-                           rnd_gen=f.fake_random)
+                           gen_fx=f.fake_random)
 
     generator.append(data_point)
 
@@ -89,40 +117,15 @@ def main():
 
     data_point = DataPoint('Input4',
                            data_type=FloatType,
-                           rnd_gen=random.randint,
-                           rnd_gen_kargs={"a": (-100), "b": 500000})
+                           gen_fx=random.randint,
+                           gen_fx_kargs={"a": (-100), "b": 500000})
 
     generator.append(data_point)
 
     for i in range(5):
         print generator.data_gen()
 
+    generator.start_fixed_interval(1000, local_callback)
+
 if __name__ == "__main__":
     main()
-
-"""
-    def load_xml_config(self, xml_file):
-        xml_tree = ET.parse(xml_file)
-        root = xml_tree.getroot()
-
-        print root.tag
-
-        for point in root.findall(XML_POINT_TAG):
-            dp = DataPoint(point.get('name'))
-            dp.data_type = getattr(BuiltIn, point.get('type'))
-            dp.distribution_fx = getattr(random, point.find('distribution').text)
-
-            arg_list = list()
-            for args in point.findall('arg'):
-                arg_list.append(getattr(BuiltIn, args.get('type'))(args.text))
-           
-            if len(arg_list) > 0:
-                arg_list = tuple(arg_list)
-            else:
-                arg_list = None
-
-            dp.distribution_args = arg_list
-
-            self.points.append(dp)
-            print str(dp)
-"""            
