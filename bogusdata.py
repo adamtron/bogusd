@@ -36,8 +36,8 @@ class DataPoint():
 class BogusDataGenerator():
     points = list()
 
-    def __init__(self, delimiter=','):
-        self.delimiter = delimiter
+    def __init__(self):
+        pass
 
     def append(self, datapoint):
         self.points.append(datapoint)
@@ -52,30 +52,53 @@ class BogusDataGenerator():
 
 
 class ScheduledBogusDataGenerator(BogusDataGenerator):
-    _callback = None
+    _output_callback = None
+    _end_callback = None
+
     _timer = None
-    _ms_interval = 1000
+    _interval_ms = 1000
+    
+    _output_size = 0
+    _iterations = 0
 
-    def start_fixed_interval(self, ms_interval, callback, ):
-        self._callback = callback
-        self._ms_interval = ms_interval
-
-        self.__reschedule__()
+    def start_fixed_interval(self, output_callback, interval_ms, end_callback=None):
+        self._output_callback = output_callback
+        self._interval_ms = interval_ms
+        
+        if end_callback is None:
+            self._end_callback = self._def_end_callback
+        else:
+            self._end_callback = end_callback
+            
+        self._schedule()
 
     def cancel(self):
         self._timer.cancel()
+        self._end_callback()
 
-    def __init__(self):
+    def __init__(self, output_size):
+        self._output_size = output_size
+
+    def _def_end_callback(self):
         pass
 
-    def __do_callback__(self):
+    def _do_output(self):
+        self._iterations += 1
         datas = self.data_gen()
-        self.__reschedule__()
-        self._callback(results=datas)
+        
+        if self._iterations < self._output_size:
+            self._schedule()
+            
+        self._output_callback(datas)
+        
+        #Do a seperate check after callbacks so our timing isn't messed up
+        #by slow callback clients 
+        if self._iterations >= self._output_size:
+            self._end_callback()        
 
-    def __reschedule__(self):
-        self._timer = threading.Timer(self._ms_interval / 1000,
-                                      self.__do_callback__)
+    def _schedule(self):
+        self._timer = threading.Timer(self._interval_ms / 1000,
+                                      self._do_output)
         self._timer.start()
 
 
@@ -83,7 +106,14 @@ def local_callback(results):
     print(results)
 
 
+def local_end_callback():
+    print('DONE!!!')
+
 def main():
+    """
+    Basic testing for outputs   
+    """
+
 #    arg_parser = argparse.ArgumentParser(description='Bogus Data Generator')
 #    arg_parser.add_argument('input_file')
 #    arg_parser.add_argument('output_file')
@@ -91,15 +121,13 @@ def main():
 #    args = arg_parser.parse_args()
 #    print args.input_file, args.output_file
 
-    generator = ScheduledBogusDataGenerator()
+    generator = ScheduledBogusDataGenerator(10)
 
     #Ex: Basic gaussian distribution fx
-    data_point = DataPoint('Input2',
-                           FloatType,
-                           random.gauss,
-                           {"mu": 0.1, "sigma": 0.2})
-
-    generator.append(data_point)
+    generator.append(DataPoint('Input1',
+                               FloatType,
+                               random.gauss,
+                               {"mu": 0.1, "sigma": 0.2}))
 
     #Ex: Custom value generator
     class FakeRandom():
@@ -109,18 +137,22 @@ def main():
             x, self.i = self.i, self.i + 1
             return x
 
-    f = FakeRandom()
+    generator.append(DataPoint('Input2',
+                               data_type=FloatType,
+                               gen_fx=FakeRandom().fake_random))
 
+    #Ex: IntType returned with stock randint and kargs
     generator.append(DataPoint('Input3',
-                               data_type=FloatType,
-                               gen_fx=f.fake_random))
-
-    generator.append(DataPoint('Input4',
-                               data_type=FloatType,
+                               data_type=IntType,
                                gen_fx=random.randint,
                                gen_fx_kargs={"a": (-100), "b": 500000}))
 
-    generator.start_fixed_interval(1000, local_callback)
+    generator.append(DataPoint('Input4',
+                               data_type=FloatType,
+                               gen_fx=random.gauss,
+                               gen_fx_kargs={"mu": 0.99, "sigma": 0.01}))
+
+    generator.start_fixed_interval(local_callback, 1000, end_callback=local_end_callback)
 
 if __name__ == "__main__":
     main()
