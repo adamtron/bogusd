@@ -35,7 +35,7 @@ class DataPoint():
 
 class BogusDataGenerator():
     points = list()
-    
+
     def __init__(self, delimiter=','):
         self.delimiter = delimiter
 
@@ -50,45 +50,50 @@ class BogusDataGenerator():
 
         return datas
 
+
 class ScheduledBogusDataGenerator(BogusDataGenerator):
     _callback = None
     _timer = None
-    _ms_interval = 1000;
-    
-    def __init__(self):
-        pass
-        
-    def start_fixed_interval(self, ms_interval, callback):
+    _ms_interval = 1000
+
+    def start_fixed_interval(self, ms_interval, callback, ):
         self._callback = callback
         self._ms_interval = ms_interval
-        
-        self._timer = threading.Timer(self._ms_interval / 1000, self.__do_callback__)
-        self._timer.start()
-    
-    def __do_callback__(self):
-        datas = self.data_gen()
-        self._timer = threading.Timer(self._ms_interval / 1000, self.__do_callback__)
-        self._timer.start()
-        
-        self._callback(results=datas)
-        
+
+        self.__reschedule__()
+
     def cancel(self):
         self._timer.cancel()
 
+    def __init__(self):
+        pass
+
+    def __do_callback__(self):
+        datas = self.data_gen()
+        self.__reschedule__()
+        self._callback(results=datas)
+
+    def __reschedule__(self):
+        self._timer = threading.Timer(self._ms_interval / 1000,
+                                      self.__do_callback__)
+        self._timer.start()
+
+
 def local_callback(results):
     print(results)
-    
-def main():
-    arg_parser = argparse.ArgumentParser(description='Bogus Data Generator')
-    arg_parser.add_argument('input_file')
-    arg_parser.add_argument('output_file')
 
-    args = arg_parser.parse_args()
-    print args.input_file, args.output_file
+
+def main():
+#    arg_parser = argparse.ArgumentParser(description='Bogus Data Generator')
+#    arg_parser.add_argument('input_file')
+#    arg_parser.add_argument('output_file')
+
+#    args = arg_parser.parse_args()
+#    print args.input_file, args.output_file
 
     generator = ScheduledBogusDataGenerator()
 
-    #Ex: Baisc gaussian distribution fx
+    #Ex: Basic gaussian distribution fx
     data_point = DataPoint('Input2',
                            FloatType,
                            random.gauss,
@@ -106,24 +111,14 @@ def main():
 
     f = FakeRandom()
 
-    data_point = DataPoint('Input3',
-                           data_type=FloatType,
-                           gen_fx=f.fake_random)
+    generator.append(DataPoint('Input3',
+                               data_type=FloatType,
+                               gen_fx=f.fake_random))
 
-    generator.append(data_point)
-
-    for i in range(5):
-        print generator.data_gen()
-
-    data_point = DataPoint('Input4',
-                           data_type=FloatType,
-                           gen_fx=random.randint,
-                           gen_fx_kargs={"a": (-100), "b": 500000})
-
-    generator.append(data_point)
-
-    for i in range(5):
-        print generator.data_gen()
+    generator.append(DataPoint('Input4',
+                               data_type=FloatType,
+                               gen_fx=random.randint,
+                               gen_fx_kargs={"a": (-100), "b": 500000}))
 
     generator.start_fixed_interval(1000, local_callback)
 
