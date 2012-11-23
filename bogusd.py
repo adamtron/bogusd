@@ -2,7 +2,7 @@ import random
 from threading import Thread, Event
 from types import *
 
-class Point():
+class DataPoint():
     """
     Represents a single output of some data point of a specified type, 
     with distribution/range specified by gen_fx (defaulting to built-in RNG) 
@@ -27,10 +27,10 @@ class Point():
                          str(self.gen_fx_kargs)))
 
 
-class Generator():
+class DataGenerator():
     """
-    Aggregator for an arbitrary set of Points, returns an ordered list of
-    outputs based on Point order
+    Aggregator for an arbitrary set of DataPoints, returns an ordered list of
+    outputs based on DataPoint order
     """
     def __init__(self):
         self.points = list()
