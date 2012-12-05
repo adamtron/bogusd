@@ -19,7 +19,7 @@ def test_bogusd():
     Basic testing for outputs
     """
 
-    generator = bogusd.Generator()
+    generator = bogusd.DataGenerator()
     
     #Ex: Custom value generator
     class FakeRandom():
@@ -37,27 +37,27 @@ def test_bogusd():
 
     fakernd = FakeRandom()
 
-    generator.append(bogusd.Point('Input1',
+    generator.append(bogusd.DataPoint('Input1',
                                data_type=StringType,
                                gen_fx=fakernd.timestampgen))
 
-    generator.append(bogusd.Point('Input2',
+    generator.append(bogusd.DataPoint('Input2',
                                data_type=FloatType,
                                gen_fx=fakernd.fake_random))
 
     #Ex: IntType returned with stock randint and kargs
-    generator.append(bogusd.Point('Input3',
+    generator.append(bogusd.DataPoint('Input3',
                                data_type=IntType,
                                gen_fx=random.randint,
                                gen_fx_kargs={"a": (-100), "b": 500000}))
 
-    generator.append(bogusd.Point('Input4',
+    generator.append(bogusd.DataPoint('Input4',
                                data_type=FloatType,
                                gen_fx=random.gauss,
                                gen_fx_kargs={"mu": 0.99, "sigma": 0.01}))
 
     #Ex: Basic gaussian distribution fx
-    generator.append(bogusd.Point('Input5',
+    generator.append(bogusd.DataPoint('Input5',
                                FloatType,
                                random.gauss,
                                gen_fx_args=(0.1,0.2)))
