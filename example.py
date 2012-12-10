@@ -1,7 +1,7 @@
-#py.test testing
 import datetime
 import random
 import bogusd 
+import threading
 from types import *
 
 
@@ -14,7 +14,7 @@ def local_end_callback():
     exit()
 
 
-def test_bogusd():
+if __name__=="__main__":
     """
     Basic testing for outputs
     """
@@ -67,9 +67,11 @@ def test_bogusd():
 #    scheduler = bogusd.FixedIntervalScheduler(local_callback, generator, 0.1, 
 #                                                output_size=100)
 
-    iter = bogusd.IntervalIterator(random.weibullvariate, 500, (0.1, 0.345))
+    iter = bogusd.IntervalIterator(random.weibullvariate, 100, (0.1, 0.345))
 
     scheduler = bogusd.IntervalScheduler(local_callback, 
                                   generator,
                                   iter)
     scheduler.start()
+    stop_timer = threading.Timer(10, scheduler.cancel)
+    stop_timer.start()
